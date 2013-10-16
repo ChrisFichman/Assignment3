@@ -7,20 +7,37 @@ class MoviesController < ApplicationController
   end
 
   def index
-		@all_ratings = Movie.ratings
+		
+		if params[:sort].nil? && params[:ratings].nil? &&
+			(!session[:sort].nil? || !session[:ratings].nil?)
+		  redirect_to movies_path(:sort => session[:sort], :ratings => session[:ratings])
+		end
+		@ratings = params[:ratings]
+		if @ratings.nil?
+			ratings = Movie.ratings
+		else
+			ratings = @ratings.keys
+		end
+		
+		@all_ratings = Movie.ratings.inject(Hash.new) do |all_ratings, rating|
+          all_ratings[rating] = @ratings.nil? ? false : @ratings.has_key?(rating) 
+          all_ratings
+		end
+		
 		order_by = params[:sort]
 		if order_by == 'title'
-			@title_header = 'hilite'
-			@movies = Movie.order(params[:sort])
+			@title_sort = 'hilite'
+			@movies = Movie.order(params[:sort]).find_all_by_rating(ratings)
 		elsif order_by == 'release_date'
-			@date_header = 'hilite'
-			@movies = Movie.order(params[:sort])
+			@date_sort = 'hilite'
+			@movies = Movie.order(params[:sort]).find_all_by_rating(ratings)
 		else
 			@title_header = ""
-			@movies = Movie.order(params[:sort])
+			@movies = Movie.order(params[:sort]).find_all_by_rating(ratings)
 		end	
-
 		
+		session[:sort] = @sort
+		session[:ratings] = @ratings
   end
 
   def new
@@ -34,7 +51,7 @@ class MoviesController < ApplicationController
   end
 
   def edit
-    @movie = Movie.find params[:id]
+    @movie = Movie.find params[:id]                       
   end
 
   def update
